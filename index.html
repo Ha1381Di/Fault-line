@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<!-- آیکون اختصاصی فاولت‌لاین در تب مرورگر -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2305070d'/%3E%3Ccircle cx='20' cy='20' r='15' stroke='%234af0c8' stroke-width='1.5' opacity='0.6' fill='none'/%3E%3Cpath d='M6 20 L14 20 L17 10 L23 30 L26 20 L34 20' stroke='%234af0c8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<title>Faultline — Institutional Risk Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent; }
+  :root{
+    --bg:#05070d; --panel:rgba(11,17,26,0.72); --panel2:rgba(18,26,38,0.55);
+    --border:rgba(74,240,200,0.14); --border-hi:rgba(74,240,200,0.45);
+    --text:#dce8ef; --muted:#6b7d8f; --accent:#4af0c8; --danger:#ff5577; --warning:#f5b042;
+    --mono:'JetBrains Mono', ui-monospace, monospace; --ui:'Inter', system-ui, sans-serif;
+  }
+  html, body{ height:100%; background:var(--bg); color:var(--text); font-family:var(--ui); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  #bg{ position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
+
+  /* --- APP LAYOUT --- */
+  #app{ position:relative; z-index:1; display:grid; grid-template-columns: 360px 1fr 400px; grid-template-rows: 68px 1fr 40px; gap: 0 16px; height:100vh; padding: 0 20px; }
+
+  /* --- HEADER --- */
+  header{ grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding:0 4px; }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-glyph{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; }
+  .brand-glyph svg{ width:100%; height:100%; animation:spin 24s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .brand-name{ font-family:var(--mono); font-weight:700; font-size:18px; letter-spacing:4px; }
+  .brand-name span{ color:var(--accent); }
+  .brand-tag{ font-size:11px; color:var(--muted); }
+  .header-right{ display:flex; align-items:center; gap:22px; }
+  .risk-gauge{ position:relative; width:56px; height:56px; }
+  .risk-gauge svg{ transform:rotate(-90deg); }
+  #riskArc{ transition: stroke-dashoffset .6s, stroke .6s; }
+  .risk-text{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .risk-num{ font-family:var(--mono); font-size:15px; font-weight:700; }
+  .risk-label{ font-size:8px; letter-spacing:1.5px; color:var(--muted); }
+  .header-meta{ font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right; line-height:1.5; }
+  .header-meta b{ color:var(--accent); }
+  .live-dot{ display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:6px; box-shadow:0 0 8px var(--accent); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 50%{ opacity:.3; } }
+
+  /* --- PANELS --- */
+  aside{ background:var(--panel); border:1px solid var(--border); border-radius:14px; backdrop-filter:blur(14px); padding:18px; display:flex; flex-direction:column; gap:14px; overflow:hidden; margin-bottom:14px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+  aside::-webkit-scrollbar{ width:6px; }
+  aside::-webkit-scrollbar-thumb{ background:rgba(74,240,200,0.15); border-radius:3px; }
+  .panel-title{ font-family:var(--mono); font-size:10px; letter-spacing:2.5px; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
+  .panel-title::after{ content:""; flex:1; height:1px; margin-left:12px; background:linear-gradient(90deg, var(--border), transparent); }
+
+  /* --- LEFT PANEL --- */
+  .total-card{ background:linear-gradient(135deg, rgba(74,240,200,0.08), rgba(74,240,200,0.01)); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .total-label{ font-size:9px; letter-spacing:2px; color:var(--muted); display:flex; justify-content:space-between;}
+  .total-value{ font-family:var(--mono); font-size:26px; font-weight:700; margin-top:4px; text-shadow:0 0 24px rgba(74,240,200,0.25); }
+  .debt-input{ width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--danger); color: var(--danger); padding: 6px; border-radius: 6px; font-family: var(--mono); font-size: 12px; margin-top: 8px; text-align: right; outline:none;}
+  .debt-input::placeholder{ color: rgba(255,85,119,0.4); }
+
+  #holdingsList{ display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:250px; padding-right:4px; }
+  #holdingsList::-webkit-scrollbar{ width:4px; }
+  #holdingsList::-webkit-scrollbar-thumb{ background:rgba(74,240,200,0.2); border-radius:2px; }
+  
+  .holding-row{ display:grid; grid-template-columns: 10px 75px 1fr 62px 20px; align-items:center; gap:8px; padding:8px 10px; background:var(--panel2); border:1px solid rgba(255,255,255,0.03); border-radius:8px; }
+  .hdot{ width:8px; height:8px; border-radius:50%; }
+  .hsym-wrap{ display:flex; flex-direction:column; justify-content:center; }
+  .hsym{ font-family:var(--mono); font-size:12px; font-weight:600; color:var(--text); line-height:1.1; }
+  .hprice{ font-family:var(--mono); font-size:9px; color:var(--accent); opacity:0.8; margin-top:2px; }
+  
+  .hamt{ width:100%; background:transparent; border:none; outline:none; color:var(--text); font-family:var(--mono); font-size:12px; text-align:right; }
+  .hval{ font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right; }
+  .hremove{ background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:18px; }
+  .hremove:hover{ color:var(--danger); }
+
+  .alloc-bar-container { height: 8px; display: flex; border-radius: 4px; overflow: hidden; background: var(--panel2); }
+  .alloc-segment { height: 100%; }
+  .risk-advisor { font-size: 10px; font-family: var(--mono); color: var(--muted); line-height: 1.4; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px; border-left: 2px solid var(--accent); }
+
+  .add-row{ display:flex; gap:8px; margin-top:auto;}
+  .add-row select, .add-row input { flex:1; background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:9px 10px; color:var(--text); font-family:var(--mono); font-size:12px; outline:none; }
+  .btn{ background:linear-gradient(135deg, rgba(74,240,200,0.16), rgba(74,240,200,0.05)); border:1px solid var(--border-hi); color:var(--accent); font-family:var(--mono); font-size:11px; letter-spacing:1px; padding:10px 14px; border-radius:8px; cursor:pointer; transition:all .18s; text-transform:uppercase; }
+  .btn:hover{ background:rgba(74,240,200,0.22); box-shadow:0 0 24px rgba(74,240,200,0.25); }
+  .btn-ghost{ background:transparent; border-color:rgba(255,255,255,0.08); color:var(--muted); }
+  .btn-ghost:hover{ color:var(--text); border-color:rgba(255,255,255,0.2); background:rgba(255,255,255,0.03); }
+
+  /* --- CENTER STAGE --- */
+  #center-stage{ position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #stage-inner{ text-align:center; pointer-events:none; position:relative; z-index:2; }
+  .stage-label{ font-family:var(--mono); font-size:10px; letter-spacing:4px; color:var(--muted); margin-bottom:8px; }
+  .stage-value{ font-family:var(--mono); font-size:52px; font-weight:700; color:var(--text); text-shadow: 0 0 40px rgba(74,240,200,0.35); transition: color .4s; }
+  .stage-delta{ font-family:var(--mono); font-size:16px; font-weight:500; margin-top:10px; min-height:20px; }
+  .stage-delta.neg{ color:var(--danger); text-shadow:0 0 20px rgba(255,85,119,0.5); }
+  .stage-delta.pos{ color:var(--accent); }
+
+  /* --- RIGHT PANEL TABS --- */
+  .tabs { display: flex; gap: 4px; background: var(--panel2); padding: 4px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap;}
+  .tab { flex: 1 1 45%; padding: 8px 0; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--muted); cursor: pointer; border-radius: 6px; border: none; background: transparent;}
+  .tab.active { background: rgba(74,240,200,0.1); color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* --- SCENARIOS & CONTROLS --- */
+  #scenarios{ display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:160px; padding-right:4px;}
+  .scenario{ text-align:left; background:var(--panel2); border:1px solid rgba(255,255,255,0.04); border-radius:10px; padding:11px 13px; cursor:pointer; color:inherit; font-family:inherit; }
+  .scenario.active{ border-color:var(--border-hi); background:linear-gradient(135deg, rgba(74,240,200,0.1), rgba(74,240,200,0.02)); }
+  .sc-name{ font-family:var(--mono); font-size:12px; color:var(--text); }
+  .scenario.active .sc-name{ color:var(--accent); }
+  .sc-desc{ font-size:11px; color:var(--muted); margin-top:3px; }
+
+  .sev-wrap{ margin-top:10px; }
+  .sev-head{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:10px; }
+  .sev-head b{ color:var(--accent); }
+  input[type=range]{ width:100%; -webkit-appearance:none; height:6px; border-radius:3px; outline:none; background: linear-gradient(90deg, var(--accent) 0%, var(--danger) 100%); cursor:pointer; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#0a1220; border:2px solid var(--accent); box-shadow:0 0 12px var(--accent); cursor:pointer; }
+
+  .actions{ display:flex; gap:8px; margin-top:12px; }
+  .actions .btn{ flex:1; padding:14px; font-size:12px; }
+  #runBtn{ background:linear-gradient(135deg, rgba(255,85,119,0.18), rgba(255,85,119,0.05)); border-color:rgba(255,85,119,0.5); color:#ff8aa2; }
+  #runBtn:hover{ background:rgba(255,85,119,0.28); box-shadow:0 0 28px rgba(255,85,119,0.4); }
+
+  /* --- RESULTS --- */
+  #results{ flex:1; overflow-y:auto; padding-right:4px; margin-top:10px; }
+  #results::-webkit-scrollbar{ width:4px; }
+  .results-empty{ font-family:var(--mono); font-size:11px; color:var(--muted); text-align:center; padding:22px 10px; border:1px dashed rgba(255,255,255,0.05); border-radius:10px; }
+  .res-summary{ display:flex; align-items:center; gap:10px; padding:12px; background:var(--panel2); border-radius:10px; margin-bottom:10px; }
+  .res-block{ flex:1; }
+  .res-label{ font-size:9px; letter-spacing:2px; color:var(--muted); }
+  .res-value{ font-family:var(--mono); font-size:16px; font-weight:600; margin-top:3px; }
+  .res-value.neg{ color:var(--danger); }
+  .res-value.pos{ color:var(--accent); }
+  .res-arrow{ color:var(--muted); }
+  .res-drawdown{ text-align:center; font-family:var(--mono); font-size:34px; font-weight:700; padding:14px 0 6px; }
+  .res-drawdown.neg{ color:var(--danger); text-shadow:0 0 30px rgba(255,85,119,0.5); }
+  .res-rows{ display:flex; flex-direction:column; gap:5px; margin-top:8px; }
+  .res-row{ display:grid; grid-template-columns: 8px 42px 1fr 40px; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; }
+  .res-bar-wrap{ height:5px; background:rgba(255,255,255,0.04); border-radius:2px; overflow:hidden; }
+  .res-bar{ height:100%; border-radius:2px; }
+  .res-pct{ text-align:right; font-size:10px; }
+
+  .ctrl-box { display: flex; flex-direction: column; gap: 10px; background: var(--panel2); padding: 14px; border-radius: 10px; border: 1px solid var(--border); }
+  .ctrl-box select, .ctrl-box input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 6px; font-family: var(--mono); font-size: 11px; outline:none;}
+  .ctrl-box input[type="file"] { padding: 6px; font-size: 10px;}
+  
+  .share-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--muted); width: 100%; margin-top: 10px; font-size: 10px; padding: 8px; border-radius: 6px; cursor: pointer; }
+  .share-btn:hover { color: var(--text); border-color: var(--border-hi); background: rgba(255,255,255,0.1); }
+
+  /* --- FOOTER & UTILS --- */
+  footer{ grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.04); padding:0 4px; font-family:var(--mono); font-size:10px; color:var(--muted); }
+  footer b{ color:var(--accent); }
+  .hidden { display: none !important; }
+  .toast{ position:fixed; bottom:70px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(11,17,26,0.95); border:1px solid var(--border-hi); color:var(--text); font-family:var(--mono); font-size:12px; padding:10px 18px; border-radius:8px; opacity:0; pointer-events:none; transition:all .3s; z-index:100; white-space:nowrap; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .crypto-fs-btn { position: fixed; bottom: 30px; right: 30px; width: 54px; height: 54px; border-radius: 12px; background: rgba(11, 17, 26, 0.75); border: 1px solid var(--border-hi); backdrop-filter: blur(10px); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 999; box-shadow: 0 0 20px rgba(74, 240, 200, 0.15); transition: all 0.3s; }
+  .crypto-fs-btn:hover { box-shadow: 0 0 30px rgba(74, 240, 200, 0.4); border-color: var(--accent); transform: translateY(-3px) scale(1.05); }
+
+  /* --- RESPONSIVE --- */
+  @media (max-width: 1100px){ #app{ grid-template-columns: 320px 1fr 360px; } .stage-value{ font-size:40px; } }
+  @media (max-width: 900px){
+    body { overflow-y: auto; }
+    #app{ display: flex; flex-direction: column; height: auto; min-height: 100vh; padding: 0 14px; gap: 16px; }
+    header{ flex-direction: row; height: auto; padding: 16px 4px; gap: 10px; }
+    .brand-name{ font-size: 15px; letter-spacing: 3px; }
+    .brand-tag, .header-meta{ display: none; }
+    .risk-gauge{ width: 44px; height: 44px; }
+    #center-stage{ min-height: 350px; height: 40vh; margin: 10px 0; }
+    .stage-value{ font-size: 42px; }
+    aside{ margin-bottom: 0; padding: 16px; height: auto; max-height: none; }
+    #holdingsList{ max-height: 250px; }
+    footer{ flex-direction: column; padding: 16px 4px; gap: 6px; text-align: center; margin-top: auto; }
+    .crypto-fs-btn { width: 44px; height: 44px; bottom: 15px; right: 15px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<button class="crypto-fs-btn" id="fsBtn" title="Toggle Fullscreen">
+  <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+  </svg>
+</button>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="brand-glyph">
+        <svg viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" stroke="#4af0c8" stroke-width="1" opacity="0.3"/>
+          <path d="M6 20 L14 20 L17 12 L23 28 L26 20 L34 20" stroke="#4af0c8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">FAULT<span>LINE</span></div>
+        <div class="brand-tag">See where your portfolio breaks</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-meta">
+        <div><span class="live-dot"></span>LIVE MARKET DATA</div>
+        <div id="weatherLabel">SYNCING · <b>...</b></div>
+      </div>
+      <div class="risk-gauge">
+        <svg viewBox="0 0 64 64" width="100%" height="100%">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5"/>
+          <circle id="riskArc" cx="32" cy="32" r="26" fill="none" stroke="#4af0c8" stroke-width="5" stroke-dasharray="163.36" stroke-dashoffset="163.36" transform="rotate(-90 32 32)" stroke-linecap="round"/>
+        </svg>
+        <div class="risk-text">
+          <div class="risk-num" id="riskNum">—</div>
+          <div class="risk-label">RISK</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <aside id="left">
+    <div class="panel-title">YOUR HOLDINGS</div>
+    <div class="total-card">
+      <div class="total-label"><span>TOTAL NET VALUE</span><span id="grossValue" style="color:var(--muted)">$0</span></div>
+      <div class="total-value" id="totalValue">$0.00</div>
+      <input type="number" class="debt-input" id="debtInput" placeholder="Debt (USD) - e.g. 1000" value="0" min="0" oninput="updateDebt(this.value)">
+    </div>
+
+    <div class="alloc-bar-container" id="allocBar"></div>
+    <div class="risk-advisor" id="riskAdvisor">Analyzing portfolio concentration...</div>
+
+    <div id="holdingsList"></div>
+    
+    <div class="add-row" id="normalAddRow">
+      <select id="addSelect" onchange="toggleCustomInput(this.value)"></select>
+      <button class="btn btn-ghost" id="addBtn">+ ADD</button>
+    </div>
+    <div class="add-row hidden" id="customAddRow">
+      <input type="text" id="customSym" placeholder="Symbol (e.g. ATOM)" style="flex:1;">
+      <input type="text" id="customId" placeholder="CoinGecko ID (e.g. cosmos)" style="flex:1;">
+      <button class="btn" id="addCustomBtn">FETCH</button>
+    </div>
+    
+    <button class="btn btn-ghost" id="demoBtn" style="margin-top:8px">LOAD DEMO</button>
+  </aside>
+
+  <main id="center-stage">
+    <div id="stage-inner">
+      <div class="stage-label" id="stageLabel">PORTFOLIO VALUE</div>
+      <div class="stage-value" id="stageValue">$0</div>
+      <div class="stage-delta" id="stageDelta"></div>
+    </div>
+  </main>
+
+  <aside id="right">
+    <div class="panel-title">RISK ENGINE</div>
+    
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('standard')">Stress Test</button>
+      <button class="tab" onclick="switchTab('mc')">Monte Carlo</button>
+      <button class="tab" onclick="switchTab('hist')">Historical</button>
+      <button class="tab" onclick="switchTab('custom')">Custom Drop</button>
+      <button class="tab" onclick="switchTab('optimizer')">Optimizer</button>
+      <button class="tab" onclick="switchTab('data')">Data Tools</button>
+    </div>
+
+    <!-- TAB 1: STANDARD -->
+    <div id="tab-standard" style="display:flex; flex-direction:column; flex:1;">
+      <div id="scenarios"></div>
+      <div class="sev-wrap">
+        <div class="sev-head"><span>SEVERITY</span><span><b id="sevLabel">100%</b></span></div>
+        <input type="range" id="sevSlider" min="10" max="100" value="100" />
+      </div>
+      <div class="actions">
+        <button class="btn" id="runBtn">RUN STRESS TEST</button>
+        <button class="btn btn-ghost" onclick="resetAll()">RESET</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: MONTE CARLO -->
+    <div id="tab-mc" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="ctrl-box">
+        <div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:6px;">VOLATILITY MULTIPLIER</div>
+          <input type="range" id="mcVol" min="10" max="200" value="100" />
+        </div>
+        <div style="font-size:11px; font-family:var(--mono); color:var(--muted); line-height:1.5;">
+          Simulates 100 paths over 30 days using Geometric Brownian Motion to calculate Value at Risk (VaR).
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="runMC()">RUN SIMULATION</button>
+        <button class="btn btn-ghost" onclick="resetAll()">RESET</button>
+      </div>
+    </div>
+
+    <!-- TAB 3: HISTORICAL -->
+    <div id="tab-hist" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="ctrl-box">
+        <div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:6px;">SELECT HISTORICAL EVENT</div>
+          <select id="histEvent">
+            <option value="ftx">FTX Collapse (Nov 2022)</option>
+            <option value="covid">COVID Black Thursday (Mar 2020)</option>
+            <option value="may2021">China Mining Ban (May 2021)</option>
+            <option value="luna">Terra LUNA Collapse (May 2022)</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="runHist()">REPLAY CRASH</button>
+        <button class="btn btn-ghost" onclick="resetAll()">RESET</button>
+      </div>
+    </div>
+
+    <!-- TAB 4: CUSTOM -->
+    <div id="tab-custom" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="ctrl-box">
+        <div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:6px;">TARGET PORTFOLIO DROP (%)</div>
+          <input type="number" id="customDrop" value="-30" min="-99" max="-1" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="runCustom()">RUN CUSTOM</button>
+        <button class="btn btn-ghost" onclick="resetAll()">RESET</button>
+      </div>
+    </div>
+
+    <!-- TAB 5: OPTIMIZER -->
+    <div id="tab-optimizer" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="ctrl-box">
+        <div>
+          <div style="font-size:10px; color:var(--muted); margin-bottom:6px;">RISK TOLERANCE</div>
+          <select id="riskTolerance">
+            <option value="conservative">Conservative (Max Stables/BTC)</option>
+            <option value="balanced">Balanced</option>
+            <option value="aggressive">Aggressive (Max Alts)</option>
+          </select>
+        </div>
+        <div style="font-size:11px; font-family:var(--mono); color:var(--muted); line-height:1.5;">
+          Automatically rebalances your portfolio to match your risk profile.
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="optimizePortfolio()">REBALANCE NOW</button>
+      </div>
+    </div>
+
+    <!-- TAB 6: DATA TOOLS -->
+    <div id="tab-data" class="hidden" style="display:flex; flex-direction:column; flex:1;">
+      <div class="ctrl-box">
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ EXPORT CSV</button>
+        <div style="font-size:10px; color:var(--muted); margin-top:10px; margin-bottom:4px;">IMPORT CSV (Format: Symbol,Amount)</div>
+        <input type="file" id="csvFile" accept=".csv" onchange="importCSV(event)">
+        <button class="btn btn-ghost" style="margin-top:10px;" onclick="enableNotifications()">🔔 ENABLE ALERTS</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="panel-title" style="margin-top:16px;">RESULTS</div>
+    <div id="results">
+      <div class="results-empty">Run a simulation to see<br/>where your portfolio breaks.</div>
+    </div>
+    <button class="share-btn hidden" id="shareBtn" onclick="shareResult()">📋 COPY RESULTS TO CLIPBOARD</button>
+  </aside>
+
+  <footer>
+    <div>FAULTLINE · <b>LIVE API</b> · MONTE CARLO · HISTORICAL · OPTIMIZER</div>
+    <div>© MMXXV · A PUBLIC GOOD</div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   FAULTLINE — Ultimate Risk Engine (Live Prices in List)
+   ============================================================ */
+
+const ASSETS = {
+  BTC:  { name:'Bitcoin',   id:'bitcoin', price:67000, color:'#f7931a', vol: 0.45, icon:'https://assets.coincap.io/assets/icons/btc@2x.png' },
+  ETH:  { name:'Ethereum',  id:'ethereum', price:3500,  color:'#8a9bff', vol: 0.55, icon:'https://assets.coincap.io/assets/icons/eth@2x.png' },
+  SOL:  { name:'Solana',    id:'solana', price:150,   color:'#14f195', vol: 0.75, icon:'https://assets.coincap.io/assets/icons/sol@2x.png' },
+  LINK: { name:'Chainlink', id:'chainlink', price:15,    color:'#4a7dff', vol: 0.60, icon:'https://assets.coincap.io/assets/icons/link@2x.png' },
+  ARB:  { name:'Arbitrum',  id:'arbitrum', price:1.1,   color:'#28a0f0', vol: 0.70, icon:'https://assets.coincap.io/assets/icons/arb@2x.png' },
+  DOGE: { name:'Dogecoin',  id:'dogecoin', price:0.15,  color:'#d4b13a', vol: 0.85, icon:'https://assets.coincap.io/assets/icons/doge@2x.png' },
+  USDC: { name:'USD Coin',  id:'usd-coin', price:1,     color:'#2775ca', vol: 0.01, icon:'https://assets.coincap.io/assets/icons/usdc@2x.png' },
+  USDT: { name:'Tether',    id:'tether', price:1,     color:'#26a17b', vol: 0.01, icon:'https://assets.coincap.io/assets/icons/usdt@2x.png' },
+  BNB:  { name:'BNB',       id:'binancecoin', price:600,   color:'#F3BA2F', vol: 0.50, icon:'https://assets.coincap.io/assets/icons/bnb@2x.png' },
+  XRP:  { name:'Ripple',    id:'ripple', price:0.50,  color:'#00aaff', vol: 0.60, icon:'https://assets.coincap.io/assets/icons/xrp@2x.png' },
+  ADA:  { name:'Cardano',   id:'cardano', price:0.40,  color:'#0033AD', vol: 0.65, icon:'https://assets.coincap.io/assets/icons/ada@2x.png' },
+  AVAX: { name:'Avalanche', id:'avalanche-2', price:30,    color:'#E84142', vol: 0.70, icon:'https://assets.coincap.io/assets/icons/avax@2x.png' }
+};
+
+const SCENARIOS = {
+  btc: { name:'BTC Crash', desc:'Bitcoin drops sharply; alts bleed harder.', impacts: s => ({ BTC:-0.55*s, ETH:-0.65*s, SOL:-0.75*s, LINK:-0.70*s, ARB:-0.75*s, DOGE:-0.70*s, USDC:0, USDT:0, BNB:-0.60*s, XRP:-0.65*s, ADA:-0.70*s, AVAX:-0.75*s }) },
+  depeg: { name:'Stablecoin Depeg', desc:'A major stablecoin loses its peg.', impacts: s => ({ USDC:-0.15*s, USDT:-0.12*s, BTC:-0.05*s, ETH:-0.08*s, SOL:-0.10*s, LINK:-0.10*s, ARB:-0.10*s, DOGE:-0.10*s, BNB:-0.06*s, XRP:-0.08*s, ADA:-0.08*s, AVAX:-0.10*s }) },
+  contagion: { name:'DeFi Contagion', desc:'A protocol hack cascades through DeFi.', impacts: s => ({ ARB:-0.60*s, LINK:-0.50*s, SOL:-0.50*s, DOGE:-0.40*s, ETH:-0.35*s, BTC:-0.25*s, USDC:-0.02*s, USDT:-0.02*s, BNB:-0.30*s, XRP:-0.35*s, ADA:-0.40*s, AVAX:-0.50*s }) },
+  regulatory: { name:'Regulatory Crackdown', desc:'Coordinated global crackdown on crypto.', impacts: s => ({ BTC:-0.40*s, ETH:-0.45*s, SOL:-0.55*s, LINK:-0.50*s, ARB:-0.60*s, DOGE:-0.55*s, USDC:-0.05*s, USDT:-0.05*s, BNB:-0.50*s, XRP:-0.65*s, ADA:-0.55*s, AVAX:-0.55*s }) },
+  liquidity: { name:'Liquidity Drain', desc:'Slippage increases as liquidity flees.', impacts: s => ({ SOL:-0.55*s, LINK:-0.50*s, ARB:-0.65*s, DOGE:-0.60*s, ETH:-0.20*s, BTC:-0.05*s, USDC:0, USDT:0, BNB:-0.25*s, XRP:-0.50*s, ADA:-0.55*s, AVAX:-0.60*s }) },
+};
+
+const HISTORICAL_DRAWDOWNS = {
+  ftx: { BTC:-0.25, ETH:-0.30, SOL:-0.50, AVAX:-0.45, DOGE:-0.35, default:-0.30 },
+  covid: { BTC:-0.50, ETH:-0.45, default:-0.55 },
+  may2021: { BTC:-0.55, ETH:-0.60, DOGE:-0.75, default:-0.65 },
+  luna: { BTC:-0.35, ETH:-0.40, SOL:-0.60, default:-0.50 }
+};
+
+const state = {
+  holdings: JSON.parse(localStorage.getItem('faultline_v5')) || [
+    { sym:'BTC',  amount:0.42 }, { sym:'ETH',  amount:5.2  }, { sym:'SOL',  amount:85   }, { sym:'USDC', amount:4200 }
+  ],
+  debt: parseFloat(localStorage.getItem('faultline_debt')) || 0,
+  scenario: 'btc',
+  severity: 1.0,
+  stress: 0,
+  targetStress: 0,
+  results: null,
+  simMode: 'standard',
+  weather: 0.25,
+  mcPaths: [],
+  imgCache: {},
+  notificationsEnabled: false
+};
+
+const lerp  = (a,b,t) => a + (b-a)*t;
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+function fmt(n){
+  const a = Math.abs(n);
+  if (a >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (a >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (a >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  if (a >= 1)   return '$' + n.toFixed(2);
+  return '$' + n.toFixed(4);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* --- NOTIFICATIONS --- */
+function enableNotifications() {
+  if (!("Notification" in window)) return showToast("Browser doesn't support notifications");
+  Notification.requestPermission().then(perm => {
+    if (perm === "granted") {
+      state.notificationsEnabled = true;
+      showToast("Alerts enabled!");
+      new Notification("Faultline", { body: "Risk alerts are now active." });
+    }
+  });
+}
+function sendAlert(msg) {
+  if (state.notificationsEnabled && Notification.permission === "granted") {
+    new Notification("⚠️ FAULTLINE RISK ALERT", { body: msg });
+  }
+}
+
+/* --- CUSTOM TOKEN & CSV --- */
+function toggleCustomInput(val) {
+  document.getElementById('customAddRow').classList.toggle('hidden', val !== 'custom');
+}
+
+async function addCustomToken() {
+  const sym = document.getElementById('customSym').value.trim().toUpperCase();
+  const id = document.getElementById('customId').value.trim().toLowerCase();
+  if (!sym || !id) return showToast("Enter symbol and CoinGecko ID");
+
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+    const data = await res.json();
+    if (!data[id]) return showToast("Token not found on CoinGecko");
+
+    ASSETS[sym] = { name: sym, id: id, price: data[id].usd, color: '#ffffff', vol: 0.6, icon: '' };
+    state.holdings.push({ sym, amount: 0 });
+    showToast(`${sym} added!`);
+    renderHoldings();
+    document.getElementById('customSym').value = '';
+    document.getElementById('customId').value = '';
+    toggleCustomInput('none');
+  } catch (e) {
+    showToast("Error fetching token");
+  }
+}
+document.getElementById('addCustomBtn').addEventListener('click', addCustomToken);
+
+function exportCSV() {
+  let csv = "Symbol,Amount\n";
+  state.holdings.forEach(h => csv += `${h.sym},${h.amount}\n`);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'faultline_portfolio.csv'; a.click();
+}
+
+function importCSV(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const lines = evt.target.result.split('\n');
+    const newHoldings = [];
+    for (let i = 1; i < lines.length; i++) {
+      const [sym, amt] = lines[i].split(',');
+      if (sym && amt && ASSETS[sym.trim().toUpperCase()]) {
+        newHoldings.push({ sym: sym.trim().toUpperCase(), amount: parseFloat(amt) });
+      }
+    }
+    if (newHoldings.length > 0) {
+      state.holdings = newHoldings;
+      renderHoldings(); saveState(); showToast("CSV Imported!");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* --- DEBT & OPTIMIZER --- */
+function updateDebt(val) {
+  state.debt = Math.max(0, parseFloat(val) || 0);
+  localStorage.setItem('faultline_debt', state.debt);
+  updateTotals();
+}
+
+function optimizePortfolio() {
+  const tolerance = document.getElementById('riskTolerance').value;
+  const total = computeGrossTotal();
+  if (total === 0) return showToast("Add assets first");
+
+  let newWeights = {};
+  if (tolerance === 'conservative') {
+    newWeights = { BTC: 0.4, USDC: 0.5, ETH: 0.1 };
+  } else if (tolerance === 'balanced') {
+    newWeights = { BTC: 0.4, ETH: 0.3, USDC: 0.2, SOL: 0.1 };
+  } else {
+    newWeights = { BTC: 0.3, ETH: 0.3, SOL: 0.2, AVAX: 0.2 };
+  }
+
+  state.holdings = [];
+  for (const sym in newWeights) {
+    if (ASSETS[sym]) {
+      const targetVal = total * newWeights[sym];
+      state.holdings.push({ sym, amount: targetVal / ASSETS[sym].price });
+    }
+  }
+  renderHoldings(); saveState(); showToast("Portfolio rebalanced to " + tolerance);
+}
+
+/* --- PRELOAD ICONS & LIVE API --- */
+function preloadIcons(){
+  for (const sym in ASSETS) {
+    if (!ASSETS[sym].icon) continue;
+    const img = new Image(); img.crossOrigin = "Anonymous"; img.src = ASSETS[sym].icon;
+    state.imgCache[sym] = img;
+  }
+}
+
+async function fetchLivePrices(){
+  try {
+    const ids = Object.values(ASSETS).map(a => a.id).join(',');
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+    const data = await res.json();
+    for (const sym in ASSETS) {
+      if (data[ASSETS[sym].id]) ASSETS[sym].price = data[ASSETS[sym].id].usd;
+    }
+    showToast("Live prices synced.");
+  } catch(e) { showToast("Offline fallback prices."); }
+  renderHoldings();
+}
+
+/* --- CANVAS & ANIMATION --- */
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1, particles = [], faultlines = [], shockwaves = [];
+let stageCenter = { x: 0, y: 0 }, stageRadius = 160;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width  = W * DPR; canvas.height = H * DPR;
+  canvas.style.width  = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  const el = document.getElementById('center-stage'), r = el.getBoundingClientRect();
+  stageCenter = { x: r.left + r.width/2, y: r.top + r.height/2 + window.scrollY };
+  stageRadius = Math.min(r.width, r.height) * 0.25;
+  initParticles();
+}
+
+function initParticles(){
+  const count = Math.min(320, Math.floor((W * H) / 6500)); particles = [];
+  for (let i = 0; i < count; i++) particles.push({ x: Math.random() * W, y: Math.random() * H, vx: 0, vy: 0, size: Math.random() * 1.6 + 0.4, seed: Math.random() * 1000 });
+}
+
+function noise2(x, y, t){
+  return (Math.sin(x * 0.9 + t * 0.7) * Math.cos(y * 0.9 - t * 0.5) + Math.sin((x + y) * 0.5 - t * 0.3) * 0.5 + Math.cos(x * 0.4 - y * 0.6 + t * 0.4) * 0.5) / 2;
+}
+
+function spawnFaultlines(){
+  faultlines = []; const n = 6 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++){
+    let a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+    let cx = stageCenter.x + Math.cos(a) * stageRadius * 0.9, cy = stageCenter.y + Math.sin(a) * stageRadius * 0.9;
+    const segs = [{ x: cx, y: cy }], len = 10 + Math.floor(Math.random() * 8);
+    for (let s = 0; s < len; s++){
+      const step = 26 + Math.random() * 34; a += (Math.random() - 0.5) * 0.9;
+      cx += Math.cos(a) * step; cy += Math.sin(a) * step; segs.push({ x: cx, y: cy });
+    }
+    faultlines.push({ segs, life: 0, maxLife: 1.6 });
+  }
+}
+
+function triggerShockwave(){ shockwaves.push({ r: stageRadius * 0.9, maxR: Math.max(W, H) * 0.85, life: 1 }); }
+
+/* --- MATH & SCENARIOS --- */
+function computeGrossTotal(){ return state.holdings.reduce((s,h) => s + h.amount * ASSETS[h.sym].price, 0); }
+function computeTotal(){ return Math.max(0, computeGrossTotal() - state.debt); }
+
+function computeStandardScenario(){
+  const impacts = SCENARIOS[state.scenario].impacts(state.severity);
+  let before = computeTotal(), afterAssets = 0; const perAsset = {};
+  
+  for (const h of state.holdings){
+    if (h.amount <= 0) continue;
+    const val = h.amount * ASSETS[h.sym].price;
+    let pct = impacts[h.sym] ?? 0;
+    
+    if (state.scenario === 'liquidity' && val > 10000) pct -= 0.05 * state.severity;
+
+    afterAssets += val * (1 + pct);
+    perAsset[h.sym] = { before: val, after: val * (1 + pct), pct };
+  }
+  
+  const after = Math.max(0, afterAssets - state.debt);
+  return { before, after, pctChange: before > 0 ? (after - before) / before : 0, perAsset, debt: state.debt };
+}
+
+function computeHistoricalScenario(){
+  const event = document.getElementById('histEvent').value;
+  const scen = HISTORICAL_DRAWDOWNS[event];
+  let before = computeTotal(), afterAssets = 0; const perAsset = {};
+  
+  for (const h of state.holdings){
+    if (h.amount <= 0) continue;
+    const val = h.amount * ASSETS[h.sym].price;
+    const pct = scen[h.sym] || scen.default;
+    afterAssets += val * (1 + pct);
+    perAsset[h.sym] = { before: val, after: val * (1 + pct), pct };
+  }
+  const after = Math.max(0, afterAssets - state.debt);
+  return { before, after, pctChange: before > 0 ? (after - before) / before : 0, perAsset, debt: state.debt };
+}
+
+function computeCustomScenario(){
+  const targetDrop = parseFloat(document.getElementById('customDrop').value) / 100;
+  let before = computeTotal(), afterAssets = 0; const perAsset = {};
+  let totalVol = 0;
+  state.holdings.forEach(h => { totalVol += (h.amount * ASSETS[h.sym].price) * ASSETS[h.sym].vol; });
+
+  for (const h of state.holdings){
+    if (h.amount <= 0) continue;
+    const val = h.amount * ASSETS[h.sym].price;
+    const weight = val / before;
+    const pct = targetDrop * ((val * ASSETS[h.sym].vol) / totalVol) / weight;
+    afterAssets += val * (1 + pct);
+    perAsset[h.sym] = { before: val, after: val * (1 + pct), pct };
+  }
+  const after = Math.max(0, afterAssets - state.debt);
+  return { before, after, pctChange: before > 0 ? (after - before) / before : 0, perAsset, debt: state.debt };
+}
+
+function runMonteCarloLogic(){
+  const before = computeTotal();
+  if (before === 0) return;
+  const paths = 100, days = 30, dt = 1 / 365;
+  const volMult = parseInt(document.getElementById('mcVol').value) / 100;
+  
+  let portfolioVol = 0;
+  state.holdings.forEach(h => { portfolioVol += ((h.amount * ASSETS[h.sym].price) / before) * ASSETS[h.sym].vol; });
+  const sigma = portfolioVol * volMult * state.severity;
+
+  state.mcPaths = []; let finalValues = [];
+  for (let p = 0; p < paths; p++) {
+    let path = [before];
+    for (let t = 1; t < days; t++) {
+      let u1 = Math.random(), u2 = Math.random();
+      let Z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      path.push(path[t-1] * Math.exp((0 - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * Z));
+    }
+    state.mcPaths.push(path); finalValues.push(path[path.length - 1]);
+  }
+  finalValues.sort((a, b) => a - b);
+  const var95 = before - finalValues[Math.floor(paths * 0.05)];
+  const after = finalValues.reduce((a,b)=>a+b, 0) / paths; 
+  state.results = { before, after, pctChange: (after - before) / before, perAsset: {}, var95, debt: state.debt };
+}
+
+/* --- RENDER UI --- */
+function renderHoldings(){
+  const list = document.getElementById('holdingsList'); list.innerHTML = '';
+  const total = computeGrossTotal();
+  const allocBar = document.getElementById('allocBar'); allocBar.innerHTML = '';
+  let advisorHTML = '';
+
+  state.holdings.forEach(h => {
+    const val = h.amount * ASSETS[h.sym].price;
+    const pct = total > 0 ? (val / total) * 100 : 0;
+    const seg = document.createElement('div'); seg.className = 'alloc-segment'; seg.style.width = pct + '%'; seg.style.background = ASSETS[h.sym].color; allocBar.appendChild(seg);
+    if (pct > 50) advisorHTML = `<span style="color:var(--danger)">High Concentration:</span> ${pct.toFixed(0)}% in ${h.sym}. Diversify!`;
+    else if (pct > 30 && !advisorHTML) advisorHTML = `<span style="color:var(--warning)">Moderate Risk:</span> ${h.sym} dominates ${pct.toFixed(0)}% of holdings.`;
+  });
+
+  if (!advisorHTML && state.holdings.length > 0) advisorHTML = `<span style="color:var(--accent)">Healthy Balance:</span> Your portfolio is well-diversified.`;
+  document.getElementById('riskAdvisor').innerHTML = advisorHTML || 'Add assets to analyze risk.';
+
+  for (const h of state.holdings){
+    const a = ASSETS[h.sym], row = document.createElement('div'); row.className = 'holding-row';
+    
+    row.innerHTML = `
+      <span class="hdot" style="background:${a.color}"></span>
+      <div class="hsym-wrap">
+        <span class="hsym">${h.sym}</span>
+        <span class="hprice">${fmt(a.price)}</span>
+      </div>
+      <input class="hamt" type="number" min="0" step="any" value="${h.amount}" />
+      <span class="hval">${fmt(h.amount * a.price)}</span>
+      <button class="hremove">×</button>
+    `;
+
+    row.querySelector('.hamt').addEventListener('input', e => {
+      h.amount = Math.max(0, parseFloat(e.target.value) || 0);
+      row.querySelector('.hval').textContent = fmt(h.amount * a.price);
+      updateTotals(); saveState();
+    });
+    row.querySelector('.hremove').addEventListener('click', () => {
+      state.holdings = state.holdings.filter(x => x !== h); renderHoldings(); saveState();
+    });
+    list.appendChild(row);
+  }
+  refreshAddSelect(); updateTotals();
+}
+
+function saveState(){ localStorage.setItem('faultline_v5', JSON.stringify(state.holdings)); }
+
+function refreshAddSelect(){
+  const sel = document.getElementById('addSelect'); sel.innerHTML = '';
+  for (const sym in ASSETS){
+    if (state.holdings.find(h => h.sym === sym)) continue;
+    const o = document.createElement('option'); o.value = sym; o.textContent = `${sym} — ${ASSETS[sym].name}`; sel.appendChild(o);
+  }
+  const custom = document.createElement('option'); custom.value = 'custom'; custom.textContent = '[+] Custom Coin'; sel.appendChild(custom);
+  document.getElementById('addBtn').disabled = sel.options.length === 0;
+}
+
+function addSelectedAsset(){
+  const sel = document.getElementById('addSelect');
+  if (!sel.value || sel.value === 'custom') return;
+  state.holdings.push({ sym: sel.value, amount: 0 }); renderHoldings(); saveState();
+}
+
+function renderScenarios(){
+  const el = document.getElementById('scenarios'); el.innerHTML = '';
+  for (const key in SCENARIOS){
+    const sc = SCENARIOS[key], btn = document.createElement('button');
+    btn.className = 'scenario' + (state.scenario === key ? ' active' : '');
+    btn.innerHTML = `<div class="sc-name">${sc.name}</div><div class="sc-desc">${sc.desc}</div>`;
+    btn.addEventListener('click', () => {
+      state.scenario = key; document.querySelectorAll('.scenario').forEach(s => s.classList.remove('active')); btn.classList.add('active');
+    });
+    el.appendChild(btn);
+  }
+}
+
+function renderResults(){
+  const el = document.getElementById('results'), shareBtn = document.getElementById('shareBtn');
+  if (!state.results){ el.innerHTML = `<div class="results-empty">Run a simulation to see<br/>where your portfolio breaks.</div>`; shareBtn.classList.add('hidden'); return; }
+  shareBtn.classList.remove('hidden');
+
+  const r = state.results, pct = r.pctChange * 100, pctStr = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%', cls = pct < 0 ? 'neg' : 'pos';
+  let extraInfo = r.var95 ? `<div class="res-row" style="margin-top:10px;"><span style="color:var(--muted);">95% VaR:</span><span class="text-danger">${fmt(r.var95)}</span></div>` : '';
+  if (r.after === 0 && r.debt > 0) extraInfo += `<div style="color:var(--danger); font-size:11px; font-family:var(--mono); text-align:center; margin-top:6px;">⚠️ LIQUIDATED (Assets < Debt)</div>`;
+
+  let rows = '';
+  if (state.simMode !== 'mc') {
+    const sorted = Object.entries(r.perAsset).sort((a, b) => a[1].pct - b[1].pct);
+    rows = `<div class="res-rows">${sorted.map(([sym, d]) => `
+        <div class="res-row">
+          <span class="hdot" style="background:${ASSETS[sym].color}"></span><span class="res-sym">${sym}</span>
+          <div class="res-bar-wrap"><div class="res-bar" style="width:${Math.min(100, Math.abs(d.pct) * 100)}%;background:${d.pct < 0 ? 'var(--danger)' : 'var(--accent)'}"></div></div>
+          <span class="res-pct ${d.pct < 0 ? 'neg' : 'pos'}">${(d.pct * 100).toFixed(0)}%</span>
+        </div>`).join('')}</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="res-summary">
+      <div class="res-block"><div class="res-label">BEFORE</div><div class="res-value">${fmt(r.before)}</div></div>
+      <div class="res-arrow">→</div>
+      <div class="res-block" style="text-align:right"><div class="res-label">AFTER</div><div class="res-value ${cls}">${fmt(r.after)}</div></div>
+    </div>
+    <div class="res-drawdown ${cls}">${pctStr}</div>
+    ${extraInfo}${rows}
+  `;
+
+  if (computeRisk().score > 75) sendAlert("Portfolio risk score exceeded 75%!");
+}
+
+function updateTotals(){
+  document.getElementById('totalValue').textContent = fmt(computeTotal());
+  document.getElementById('grossValue').textContent = fmt(computeGrossTotal()) + (state.debt > 0 ? ' - Debt' : '');
+  document.getElementById('debtInput').value = state.debt || '';
+  updateRiskGauge(computeRisk());
+}
+
+function computeRisk(){
+  const total = computeGrossTotal();
+  if (total <= 0) return { score: 0 };
+  let hhi = 0, stables = 0;
+  for (const h of state.holdings){
+    const w = (h.amount * ASSETS[h.sym].price) / total;
+    hhi += w * w;
+    if (h.sym === 'USDC' || h.sym === 'USDT') stables += h.amount * ASSETS[h.sym].price;
+  }
+  const sc = computeStandardScenario(), loss = Math.max(0, -sc.pctChange);
+  const score = clamp(((hhi - 0.15)/0.85)*100 * 0.35 + clamp(loss/0.5,0,1)*100 * 0.55 + 15 - (stables/total)*40, 0, 100);
+  return { score };
+}
+
+function updateRiskGauge(risk){
+  const arc = document.getElementById('riskArc'), num = document.getElementById('riskNum');
+  arc.style.strokeDashoffset = 163.36 * (1 - (risk.score || 0) / 100);
+  let color = '#4af0c8'; if (risk.score >= 65) color = '#ff5577'; else if (risk.score >= 35) color = '#f5b042';
+  arc.setAttribute('stroke', color); num.textContent = risk.score ? Math.round(risk.score) : '—'; num.style.color = color;
+}
+
+/* --- ANIMATION LOOP --- */
+let lastT = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; const time = now / 1000;
+  state.stress += (state.targetStress - state.stress) * Math.min(1, dt * 4);
+  state.weather = clamp(0.25 + 0.14 * Math.sin(time * 0.09) + 0.10 * Math.sin(time * 0.037 + 2), 0.08, 0.55);
+  const bgStress = clamp(Math.max(state.weather, state.stress * 1.15), 0, 1);
+  document.getElementById('weatherLabel').innerHTML = `${bgStress < 0.25 ? 'CALM' : bgStress < 0.5 ? 'CHOPPY' : bgStress < 0.75 ? 'VOLATILE' : 'STORM'} · <b>VOL ${bgStress.toFixed(2)}</b>`;
+
+  drawBackground(bgStress); drawParticles(time, bgStress); drawFaultlines(dt); drawShockwaves(dt);
+  if (state.simMode === 'mc' && state.stress > 0.1) drawMonteCarlo(time); else drawPortfolio(time);
+  updateStageText();
+  requestAnimationFrame(frame);
+}
+
+function drawBackground(stress){
+  const g = ctx.createRadialGradient(stageCenter.x, stageCenter.y, 0, stageCenter.x, stageCenter.y, Math.max(W, H) * 0.75);
+  g.addColorStop(0, `hsl(${lerp(200, 350, stress * 0.5)}, 60%, ${4 + stress * 3}%)`); g.addColorStop(1, '#05070d');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (stress > 0.1){ ctx.fillStyle = `rgba(255, 55, 90, ${stress * 0.06})`; ctx.fillRect(0, 0, W, H); }
+}
+
+function drawParticles(time, stress){
+  const speed = 0.35 + stress * 3.2, hue = lerp(165, 350, stress);
+  for (const p of particles){
+    const a = noise2(p.x * 0.004, p.y * 0.004, time * 0.3 + p.seed) * Math.PI * 2;
+    p.vx += Math.cos(a) * 0.03; p.vy += Math.sin(a) * 0.03; p.vx *= 0.955; p.vy *= 0.955; p.x += p.vx * speed; p.y += p.vy * speed;
+    if (p.x < -10) p.x = W + 10; if (p.x > W + 10) p.x = -10; if (p.y < -10) p.y = H + 10; if (p.y > H + 10) p.y = -10;
+    ctx.fillStyle = `hsla(${hue}, ${70 + stress * 20}%, ${60 + stress * 15}%, ${0.25 + stress * 0.45})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1 + stress * 0.6), 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawFaultlines(dt){
+  for (let i = faultlines.length - 1; i >= 0; i--){
+    const f = faultlines[i]; f.life += dt;
+    if (f.life / f.maxLife >= 1){ faultlines.splice(i, 1); continue; }
+    const progress = Math.min(1, (f.life / f.maxLife) * 3), alpha = (1 - f.life / f.maxLife) * 0.9;
+    const drawTo = Math.floor(progress * (f.segs.length - 1)) + 1;
+    ctx.save(); ctx.strokeStyle = `rgba(255, 85, 119, ${alpha})`; ctx.lineWidth = 1.6; ctx.shadowBlur = 14; ctx.shadowColor = `rgba(255, 85, 119, ${alpha})`;
+    ctx.beginPath(); ctx.moveTo(f.segs[0].x, f.segs[0].y);
+    for (let s = 1; s <= drawTo && s < f.segs.length; s++) ctx.lineTo(f.segs[s].x, f.segs[s].y);
+    ctx.stroke(); ctx.restore();
+  }
+}
+
+function drawShockwaves(dt){
+  for (let i = shockwaves.length - 1; i >= 0; i--){
+    const s = shockwaves[i]; s.r += (s.maxR - s.r) * Math.min(1, dt * 2.2); s.life -= dt * 0.8;
+    if (s.life <= 0){ shockwaves.splice(i, 1); continue; }
+    ctx.strokeStyle = `rgba(255, 85, 119, ${s.life * 0.5})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(stageCenter.x, stageCenter.y, s.r, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+function drawPortfolio(time){
+  const cx = stageCenter.x, cy = stageCenter.y, stress = state.stress;
+  const total = computeTotal(), results = state.results;
+  const baseR = clamp(Math.log10(Math.max(total, 100)) * 8, 20, 55), coreR = baseR * (1 - stress * 0.35);
+  const hue = lerp(170, 350, stress);
+
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 4.5);
+  glow.addColorStop(0, `hsla(${hue}, 80%, 60%, ${0.28 + stress * 0.15})`); glow.addColorStop(1, `hsla(${hue}, 80%, 60%, 0)`);
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, coreR * 4.5, 0, Math.PI * 2); ctx.fill();
+
+  const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+  cg.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.95)`); cg.addColorStop(0.6, `hsla(${hue}, 90%, 60%, 0.6)`); cg.addColorStop(1, `hsla(${hue}, 80%, 45%, 0.15)`);
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = `hsla(${hue}, 100%, 80%, 0.8)`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, Math.PI * 2); ctx.stroke();
+
+  const holdings = state.holdings.filter(h => h.amount > 0);
+  if (holdings.length === 0) return;
+  const orbitR = Math.max(coreR * 3.5, stageRadius * 1.1) * (1 + stress * 0.15), nodeMax = Math.max(16, orbitR * 0.16);
+
+  holdings.forEach((h, i) => {
+    const a = ASSETS[h.sym], val = h.amount * a.price, resAsset = results?.perAsset?.[h.sym];
+    const beforeAlloc = resAsset ? resAsset.before / (results.before + state.debt) : val / total;
+    const fallFactor = resAsset ? clamp(1 + resAsset.pct * stress, 0.05, 1.2) : 1;
+    const iconSize = clamp(nodeMax * beforeAlloc * 3 * fallFactor, 12, nodeMax * 1.5);
+    const angle = (i / holdings.length) * Math.PI * 2 + time * 0.16 + (h.sym.charCodeAt(0) % 7) * 0.3;
+    const jitter = stress * (1 - fallFactor) * 14;
+    const nx = cx + Math.cos(angle) * orbitR + Math.sin(time * 12 + i) * jitter, ny = cy + Math.sin(angle) * orbitR + Math.cos(time * 11 + i * 1.3) * jitter;
+
+    ctx.strokeStyle = `rgba(120, 160, 190, ${0.08 + stress * 0.08})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke();
+
+    if (state.imgCache[h.sym] && state.imgCache[h.sym].complete && state.imgCache[h.sym].naturalWidth > 0) {
+      ctx.save(); ctx.beginPath(); ctx.arc(nx, ny, iconSize/2, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(state.imgCache[h.sym], nx - iconSize/2, ny - iconSize/2, iconSize, iconSize); ctx.restore();
+      ctx.strokeStyle = a.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(nx, ny, iconSize/2, 0, Math.PI * 2); ctx.stroke();
+    } else {
+      ctx.fillStyle = a.color; ctx.beginPath(); ctx.arc(nx, ny, iconSize/2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (iconSize > 20){
+      ctx.fillStyle = `rgba(220, 232, 239, ${0.55 + stress * 0.3})`; ctx.font = '500 10px "JetBrains Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(h.sym, nx, ny - iconSize/2 - 8);
+    }
+  });
+}
+
+function drawMonteCarlo(time){
+  const cx = stageCenter.x, cy = stageCenter.y, total = computeTotal();
+  if (total <= 0 || state.mcPaths.length === 0) return;
+  const maxVal = Math.max(...state.mcPaths.map(p => Math.max(...p))), minVal = Math.min(...state.mcPaths.map(p => Math.min(...p)));
+  const maxRadius = stageRadius * 1.8, minRadius = stageRadius * 0.6;
+  
+  ctx.fillStyle = `hsla(${lerp(170, 350, state.stress)}, 100%, 80%, 0.95)`; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.fill();
+
+  ctx.save(); ctx.globalCompositeOperation = 'screen';
+  state.mcPaths.forEach((path, i) => {
+    if (i % 2 !== 0) return; 
+    const finalVal = path[path.length - 1];
+    const radius = lerp(minRadius, maxRadius, (finalVal - minVal) / (maxVal - minVal));
+    const angle = (i / state.mcPaths.length) * Math.PI * 2 + time * 0.2;
+    const nx = cx + Math.cos(angle) * radius, ny = cy + Math.sin(angle) * radius;
+    ctx.strokeStyle = `rgba(59, 130, 246, 0.15)`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke();
+    ctx.fillStyle = `rgba(59, 130, 246, 0.3)`; ctx.beginPath(); ctx.arc(nx, ny, 1.5, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.restore();
+}
+
+function updateStageText(){
+  const total = computeTotal(), results = state.results;
+  let displayValue = total, deltaStr = '', deltaCls = '';
+  const labelEl = document.getElementById('stageLabel');
+
+  if (state.simMode === 'mc') {
+    labelEl.textContent = 'EXPECTED PORTFOLIO VALUE (MC)';
+    if (state.stress > 0.005 && results) {
+      displayValue = lerp(results.before, results.after, state.stress);
+      const pct = results.pctChange * 100 * state.stress;
+      deltaStr = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'; deltaCls = pct < 0 ? 'neg' : 'pos';
+    }
+  } else {
+    labelEl.textContent = 'PORTFOLIO VALUE';
+    if (results && state.stress > 0.005){
+      displayValue = lerp(results.before, results.after, state.stress);
+      const pct = results.pctChange * 100 * state.stress;
+      deltaStr = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%'; deltaCls = pct < 0 ? 'neg' : 'pos';
+    } else if (results) { deltaStr = '—'; }
+  }
+
+  const sv = document.getElementById('stageValue'), sd = document.getElementById('stageDelta');
+  sv.textContent = fmt(displayValue); sv.style.color = state.stress > 0.4 ? '#ff5577' : '#dce8ef';
+  sv.style.textShadow = state.stress > 0.4 ? '0 0 40px rgba(255,85,119,0.5)' : '0 0 40px rgba(74,240,200,0.35)';
+  sd.textContent = deltaStr; sd.className = 'stage-delta ' + deltaCls;
+}
+
+/* --- EVENT WIRING --- */
+document.getElementById('addBtn').addEventListener('click', addSelectedAsset);
+document.getElementById('demoBtn').addEventListener('click', () => {
+  state.holdings = [ { sym:'BTC', amount:0.42 }, { sym:'ETH', amount:5.2 }, { sym:'SOL', amount:85 }, { sym:'LINK', amount:320 }, { sym:'USDC', amount:4200 }, { sym:'DOGE', amount:10000 } ];
+  state.debt = 0; renderHoldings(); saveState(); showToast('Demo loaded');
+});
+document.getElementById('sevSlider').addEventListener('input', e => {
+  state.severity = parseInt(e.target.value, 10) / 100; document.getElementById('sevLabel').textContent = Math.round(state.severity * 100) + '%';
+});
+function switchTab(tab) {
+  state.simMode = tab; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active');
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden')); document.getElementById('tab-' + tab).classList.remove('hidden'); resetAll();
+}
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (state.holdings.filter(h => h.amount > 0).length === 0) return showToast('Add holdings first');
+  state.results = computeStandardScenario(); state.targetStress = state.severity; triggerShockwave(); spawnFaultlines(); renderResults();
+});
+function runMC() { if (state.holdings.filter(h => h.amount > 0).length === 0) return showToast('Add holdings first'); runMonteCarloLogic(); state.targetStress = 1.0; triggerShockwave(); renderResults(); }
+function runHist() { if (state.holdings.filter(h => h.amount > 0).length === 0) return showToast('Add holdings first'); state.results = computeHistoricalScenario(); state.targetStress = 1.0; triggerShockwave(); spawnFaultlines(); renderResults(); }
+function runCustom() { if (state.holdings.filter(h => h.amount > 0).length === 0) return showToast('Add holdings first'); state.results = computeCustomScenario(); state.targetStress = 1.0; triggerShockwave(); spawnFaultlines(); renderResults(); }
+function resetAll() { state.targetStress = 0; state.results = null; state.mcPaths = []; renderResults(); updateTotals(); }
+
+function shareResult() {
+  if (!state.results) return;
+  const text = `🚨 Faultline Stress Test Result:\nBefore: ${fmt(state.results.before)}\nAfter: ${fmt(state.results.after)}\nImpact: ${(state.results.pctChange*100).toFixed(1)}%\n\nTest your crypto portfolio at Faultline!`;
+  navigator.clipboard.writeText(text).then(() => showToast('Results copied to clipboard!'));
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('scroll', () => { const el = document.getElementById('center-stage'), r = el.getBoundingClientRect(); stageCenter = { x: r.left + r.width/2, y: r.top + r.height/2 + window.scrollY }; });
+
+/* --- FULLSCREEN --- */
+const fsBtn = document.getElementById('fsBtn'), fsIcon = document.getElementById('fsIcon');
+fsBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    fsIcon.innerHTML = '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>';
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    fsIcon.innerHTML = '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>';
+  }
+});
+document.addEventListener('fullscreenchange', () => { setTimeout(resize, 100); });
+
+/* --- INIT --- */
+function init(){
+  resize(); preloadIcons(); renderHoldings(); renderScenarios(); renderResults();
+  fetchLivePrices();
+  requestAnimationFrame(frame);
+}
+init();
+</script>
+</body>
+</html>
